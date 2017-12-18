@@ -1,0 +1,23 @@
+{
+  "name": "gosfu-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raiyaj/goSFU-bot.git"
+  },
+  "author": "Raiya Jessa",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/raiyaj/goSFU-bot/issues"
+  },
+  "homepage": "https://github.com/raiyaj/goSFU-bot#readme",
+  "dependencies": {
+    "twit": "^2.2.9"
+  }
+}
