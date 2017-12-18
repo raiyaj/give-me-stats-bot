@@ -1,5 +1,5 @@
 {
-  "name": "gosfu-bot",
+  "name": "give-me-stats-bot",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/raiyaj/goSFU-bot.git"
+    "url": "git+https://github.com/raiyaj/give-me-stats-bot.git"
   },
   "author": "Raiya Jessa",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/raiyaj/goSFU-bot/issues"
+    "url": "https://github.com/raiyaj/give-me-stats-bot/issues"
   },
-  "homepage": "https://github.com/raiyaj/goSFU-bot#readme",
+  "homepage": "https://github.com/raiyaj/give-me-stats-bot#readme",
   "dependencies": {
     "twit": "^2.2.9"
   }

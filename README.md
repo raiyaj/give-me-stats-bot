@@ -1,1 +1,1 @@
-# goSFU-bot
+# give-me-stats-bot
