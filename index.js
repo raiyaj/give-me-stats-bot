@@ -1,9 +1,17 @@
-var Twit = require('twit');  // import the twit package
+// load environment variables from .env into process.env
+require('dotenv').config();
 
-// load in api keys from config.js and create a new Twit object using the keys
-// (this will be our connection to the Twitter api via the twit package)
-var config = require('./config.js');
-var T = new Twit(config);
+// import the twit package
+var Twit = require('twit');
+
+// create a new Twit object using the api keys inside environment variables
+// (this authenticates me using Oauth and will be our connection to the Twitter api via the twit package)
+var T = new Twit({
+  consumer_key: process.env.TWITTER_CONSUMER_KEY,
+  consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
+  access_token: process.env.TWITTER_ACCESS_TOKEN,
+  access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
+});
 
 // initialize a public stream and filter by my screen name
 var stream = T.stream('statuses/filter', { track: '@give_me_stats' });
