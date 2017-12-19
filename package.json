@@ -1,7 +1,7 @@
 {
   "name": "give-me-stats-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "a friendly bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -19,6 +19,7 @@
   "homepage": "https://github.com/raiyaj/give-me-stats-bot#readme",
   "dependencies": {
     "dotenv": "^4.0.0",
+    "mongodb": "^3.0.0-rc0",
     "twit": "^2.2.9"
   }
 }

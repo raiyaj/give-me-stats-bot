@@ -1,6 +1,7 @@
 // load environment variables from .env into process.env
 require('dotenv').config();
 
+
 // import the twit package
 var Twit = require('twit');
 
@@ -13,12 +14,29 @@ var T = new Twit({
   access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
 });
 
+
+// import mongoDB
+var mongo = require('mongodb').MongoClient;
+
+// connect to the server
+var dbURL = process.env.MONGODB_URI;
+mongo.connect(dbURL, function(err, db) {
+  if (err) {
+    console.log('Unable to connect to the mongoDB server.', err);
+  } else {
+    console.log('Connection to the mongoDB server established!');
+    db.close();
+  }
+});
+
+
 // initialize a public stream and filter by my screen name
 var stream = T.stream('statuses/filter', { track: '@give_me_stats' });
 
 // listen for new tweets
 stream.on('tweet', function(tweet) {
-  console.log(tweet);
+  // console.log(tweet);
+  console.log('\nA tweet just came in! This is it:', tweet.text);
 
   // check if tweet uses the #subscribe hashtag
   var tags = Object.keys(tweet.entities.hashtags);
@@ -31,10 +49,13 @@ stream.on('tweet', function(tweet) {
 
   // filter stream by tweets to me, from users requesting to subscribe
   if (tweet.in_reply_to_screen_name == 'give_me_stats' && subscribes) {
+    console.log("\nIt's a new subscriber; tweeting a thank-you.");
+
     // tweet a thank-you reply
     T.post('statuses/update', { status: '@' + tweet.user.screen_name + ' Thank you for subscribing!',
     in_reply_to_status_id: tweet.id_str }, function(err, data, response) {
-      console.log(err);
+      console.log('Unable to tweet a thank-you for subscribing.', err);
     });
+
   }
 });
