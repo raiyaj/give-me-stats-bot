@@ -5,9 +5,8 @@ var Twit = require('twit');  // import the twit package
 var config = require('./config.js');
 var T = new Twit(config);
 
-// initialize a user stream (eg. for all activities related to my account)
-// set tweet mode so that the entities object is populated
-var stream = T.stream('user', { tweet_mode: 'extended' });
+// initialize a public stream and filter by my screen name
+var stream = T.stream('statuses/filter', { track: '@give_me_stats' });
 
 // listen for new tweets
 stream.on('tweet', function(tweet) {
