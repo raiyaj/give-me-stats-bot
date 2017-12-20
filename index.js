@@ -8,9 +8,8 @@ var Twit = require('twit'),
 dotenv.config();
 
 
-// Load in variables from config.js
-var config = require('./config.js');
-var twitter_handle = config.twitter_handle;
+// Get the bot's twitter handle
+var twitter_handle = process.env.TWITTER_HANDLE;
 
 
 // Create a new Twit object using the api keys
