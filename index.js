@@ -44,13 +44,18 @@ stream.on('tweet', function(tweet) {
   console.log("A tweet just came in! This is it: '" + tweet.text + "'");
 
 
-  // Check if tweet uses the #subscribe hashtag
+  // Check if tweet uses the #subscribe or #stop hashtags
   var tags = Object.keys(tweet.entities.hashtags);
-  var subscribes = false;
-  for (var i = 0; i < tags.length; i++) {
-    if (tweet.entities.hashtags[tags[i]].text.toLowerCase() == 'subscribe') {
+  var subscribes = false, unsubscribes = false;
+  var i = 0;
+  while (i < tags.length && !subscribes && !unsubscribes) {
+    if (tweet.entities.hashtags[tags[i]].text.toLowerCase() == 'stop') {
+      unsubscribes = true;
+    } else if (tweet.entities.hashtags[tags[i]].text.toLowerCase() == 'subscribe') {
+      // Note: if both hashtags are used, #stop takes precedence
       subscribes = true;
     }
+    i++;
   }
 
 
@@ -101,18 +106,42 @@ stream.on('tweet', function(tweet) {
           tweets_this_week: 0
         };
 
-        subscribers.insertOne(subscriberObj, function(err, res) {
-          if (err) {
-            console.log('Failed to add subscriber', err);
-          } else {
-            console.log('New subscriber inserted into collection');
-          }
-        });
+        console.log('Inserting new subscriber into collection');
+        try {
+          subscribers.insertOne(subscriberObj);
+        } catch (e) {
+          console.log('Insertion failed', e);
+        }
 
       }
 
     });
 
-  }
+  }  // end processing #subscribe
 
-});
+
+  // Filter stream by tweets to me, from users requesting to unsubscribe
+  else if (tweet.in_reply_to_screen_name == 'give_me_stats' && unsubscribes) {
+    console.log('The tweet uses the hashtag #stop');
+
+
+    // Create a 'subscribers' collection if it doesn't already exist
+    var subscribers = db.collection('subscribers');
+
+
+    // Drop subscriber from collection
+    console.log('Removing subscriber from collection');
+    try {
+      subscribers.deleteOne({ user_id: tweet.user.id_str }, function(err, res) {
+        if (res.deletedCount == 0) {
+          console.log('User not found in database; nothing to delete');
+        }
+      });
+    } catch (e) {
+      console.log('Deletion failed', e);
+    }
+
+  }  // end processing #stop
+
+
+});  // end stream
