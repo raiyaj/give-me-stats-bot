@@ -8,6 +8,11 @@ var Twit = require('twit'),
 dotenv.config();
 
 
+// Load in variables from config.js
+var config = require('./config.js');
+var twitter_handle = config.twitter_handle;
+
+
 // Create a new Twit object using the api keys
 // (this authenticates me using Oauth and will be our connection to the Twitter api via the twit package)
 var T = new Twit({
@@ -18,8 +23,8 @@ var T = new Twit({
 });
 
 
-// Create a database variable outside of the database connection callback to reuse the connection pool
-var db;
+// Create database & collection variables outside of the database connection callback to reuse the connection pool
+var db, subscribers;
 
 // Connect to the database
 var dbURL = process.env.MONGODB_URI;
@@ -30,13 +35,17 @@ mongo.MongoClient.connect(dbURL, function(err, client) {
   } else {
     // Save database object from the callback for reuse
     db = client.db('give-me-stats-bot');
+
+    // Create a 'subscribers' collection if it doesn't already exist
+    subscribers = db.collection('subscribers');
+
     console.log('Database connection ready');
   }
 });
 
 
 // Initialize a public stream and filter by my screen name
-var stream = T.stream('statuses/filter', { track: '@give_me_stats' });
+var stream = T.stream('statuses/filter', { track: '@' + twitter_handle });
 
 // Listen for new tweets
 stream.on('tweet', function(tweet) {
@@ -60,12 +69,8 @@ stream.on('tweet', function(tweet) {
 
 
   // Filter stream by tweets to me, from users requesting to subscribe
-  if (tweet.in_reply_to_screen_name == 'give_me_stats' && subscribes) {
-    console.log('The tweet uses the hashtag #subscribe');
-
-
-    // Create a 'subscribers' collection if it doesn't already exist
-    var subscribers = db.collection('subscribers');
+  if (tweet.in_reply_to_screen_name == twitter_handle && subscribes) {
+    console.log('The tweet uses #subscribe');
 
 
     // Check if user is already a subscriber
@@ -121,12 +126,8 @@ stream.on('tweet', function(tweet) {
 
 
   // Filter stream by tweets to me, from users requesting to unsubscribe
-  else if (tweet.in_reply_to_screen_name == 'give_me_stats' && unsubscribes) {
-    console.log('The tweet uses the hashtag #stop');
-
-
-    // Create a 'subscribers' collection if it doesn't already exist
-    var subscribers = db.collection('subscribers');
+  else if (tweet.in_reply_to_screen_name == twitter_handle && unsubscribes) {
+    console.log('The tweet uses #stop');
 
 
     // Drop subscriber from collection
@@ -142,6 +143,12 @@ stream.on('tweet', function(tweet) {
     }
 
   }  // end processing #stop
+
+
+  else if (tweet.in_reply_to_screen_name == twitter_handle) {
+    console.log("The tweet uses neither #subscribe nor #stop");
+  }
+  // end processing my mentions
 
 
 });  // end stream
