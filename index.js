@@ -34,7 +34,7 @@ mongo.MongoClient.connect(dbURL, function(err, client) {
     process.exitCode = 1;  // Failure
   } else {
     // Save database object from the callback for reuse
-    db = client.db('give-me-stats-bot');
+    db = client.db(process.env.MONGODB_DATABASE_NAME);
     console.log('Database connection ready');
 
     // Create a 'subscribers' collection if it doesn't already exist
@@ -162,20 +162,17 @@ stream.on('tweet', function(tweet) {
 // Schedule regular times at which to send messages
 
 // For development:
-var jobDev = new cron.CronJob({
-  cronTime: '00 */2 * * * *',  // Run every two minutes
+var cronTimeValue = '00 */2 * * * *';  // Run every two minutes
+
+// For production:
+// var cronTimeValue = '00 00 08 * * 0',  // Run every Sunday at 8:00:00 AM
+
+var job = new cron.CronJob({
+  cronTime: cronTimeValue,
   onTick: sendMessages,  // Function to fire at specified time
   start: true,  // Start job right now
   timeZone: 'America/Vancouver'  // PST
 });
-
-// For production:
-// var jobProd = new cron.CronJob({
-//   cronTime: '00 00 08 * * 0',  // Run every Sunday at 8:00:00 AM
-//   onTick: sendMessages,  // Function to fire at specified time
-//   start: true,  // Start job right now
-//   timeZone: 'America/Vancouver'  // PST
-// });
 
 
 function sendMessages() {

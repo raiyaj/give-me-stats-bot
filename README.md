@@ -1,6 +1,6 @@
 # Give me stats bot
 
-### Setup
+## Setup
 
 __Twitter__
 
@@ -21,8 +21,9 @@ __mLab__
 
 Login to your (free) [mLab](https://mlab.com/) account. [Create a new MongoDB Deployment](https://mlab.com/create/wizard#PlanType-Provider), using _Amazon Web Services_ as your cloud provider and _Sandbox_ as your plan type. Select the AWS region closest to you.
 
-Click on your new deployment and create a new database user under the _Users_ tab, with _read-only_ set to _false_. At the top of the page, you'll see a link to connect to the database server via the standard MongoDB URI, like so: `mongodb://<dbuser>:<dbpassword>@ds...`. Add this to your `.env` file, inserting the username and password of the user you just created:
+Click on your new deployment and create a new database user under the _Users_ tab, with _read-only_ set to _false_. At the top of the page is a link to connect to the database via the MongoDB URI: `mongodb://<dbuser>:<dbpassword>@ds...`. Add this to your `.env` file (inserting the username and password of the user you just created), along with the name of your database:
 ```
+MONGODB_DATABASE_NAME=<your_database_name>
 MONGODB_URI=<your_mongodb_uri>
 ```
 
