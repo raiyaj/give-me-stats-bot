@@ -162,19 +162,52 @@ stream.on('tweet', function(tweet) {
 // Schedule regular times at which to send messages
 
 // For development:
-var cronTimeValue = '00 */2 * * * *';  // Run every two minutes
+var cronTimeValue = '*/6 * * * * *';  // Run every 10 seconds
+// var cronTimeValue = '*/2 * * * * *';  // Run every 30 seconds
+// var cronTimeValue = '00 * * * * *';  // Run every minute
 
 // For production:
-// var cronTimeValue = '00 00 08 * * 0',  // Run every Sunday at 8:00:00 AM
+// var cronTimeValue = '00 00 08 * * 0';  // Run every Sunday at 8:00:00 AM
 
 var job = new cron.CronJob({
   cronTime: cronTimeValue,
   onTick: sendMessages,  // Function to fire at specified time
   start: true,  // Start job right now
-  timeZone: 'America/Vancouver'  // PST
+  timeZone: 'America/Los_Angeles'  // PST
 });
 
 
+// Sends all subscribers their weekly twitter stats via direct message:
+// eg. # tweets made, # followers gained/lost, # friends gained/lost
 function sendMessages() {
-  console.log('tick');
-}
+  console.log('Tick');
+
+
+  // Iterate through all subscribers
+  subscribers.find().forEach(function(doc) {
+    // Get their current # of followers and friends
+    console.log("Looking up user's current stats");
+    T.get('users/lookup', { user_id: doc.user_id }, function(err, data, response) {
+      if (err) {
+        console.log('Lookup failed');
+      } else {
+        var followers_count_end = data[0].followers_count,
+            friends_count_end = data[0].friends_count;
+      }
+
+
+      // Update the db with current follower and friend counts
+      console.log('Updating database with new stats');
+      try {
+        subscribers.updateOne({ user_id: doc.user_id }, {
+          $set: { followers_count_start: followers_count_end, friends_count_start: friends_count_end }
+        });
+      } catch(e) {
+        console.log('Update failed', e);
+      }
+
+    });
+
+  });  // end iterating through subscribers
+
+}  // end sendMessages()
