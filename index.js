@@ -1,7 +1,8 @@
 // Import packages
 var Twit = require('twit'),
     mongo = require('mongodb'),
-    dotenv = require('dotenv');
+    dotenv = require('dotenv'),
+    cron = require('cron');
 
 
 // Load environment variables from .env into process.env
@@ -34,14 +35,16 @@ mongo.MongoClient.connect(dbURL, function(err, client) {
   } else {
     // Save database object from the callback for reuse
     db = client.db('give-me-stats-bot');
+    console.log('Database connection ready');
 
     // Create a 'subscribers' collection if it doesn't already exist
     subscribers = db.collection('subscribers');
-
-    console.log('Database connection ready');
   }
 });
 
+
+
+// ...... FILTER INCOMING TWEETS ......
 
 // Initialize a public stream and filter by my screen name
 var stream = T.stream('statuses/filter', { track: '@' + twitter_handle });
@@ -151,3 +154,30 @@ stream.on('tweet', function(tweet) {
 
 
 });  // end stream
+
+
+
+// ...... SEND WEEKLY STATS ......
+
+// Schedule regular times at which to send messages
+
+// For development:
+var jobDev = new cron.CronJob({
+  cronTime: '00 */2 * * * *',  // Run every two minutes
+  onTick: sendMessages,  // Function to fire at specified time
+  start: true,  // Start job right now
+  timeZone: 'America/Vancouver'  // PST
+});
+
+// For production:
+// var jobProd = new cron.CronJob({
+//   cronTime: '00 00 08 * * 0',  // Run every Sunday at 8:00:00 AM
+//   onTick: sendMessages,  // Function to fire at specified time
+//   start: true,  // Start job right now
+//   timeZone: 'America/Vancouver'  // PST
+// });
+
+
+function sendMessages() {
+  console.log('tick');
+}
