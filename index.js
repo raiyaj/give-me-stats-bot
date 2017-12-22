@@ -44,20 +44,21 @@ mongo.MongoClient.connect(dbURL, function(err, client) {
 
 
 
-// ...... FILTER INCOMING TWEETS ......
+// ...... LISTEN FOR MY INCOMING TWEETS & MESSAGES ......
 
-// Initialize a public stream
-var stream = T.stream('statuses/filter', { track: '@' + twitterHandle });
+// Initialize a user stream
+// (set tweet mode so that the entities object is populated)
+var userStream = T.stream('user', { tweet_mode: 'extended' });
 
-// Listen for new tweets
-stream.on('tweet', function(tweet) {
+
+// Listen for tweets
+userStream.on('tweet', function(tweet) {
   // console.log(tweet);
-  console.log("A tweet just came in! This is it: '" + tweet.text + "'");
 
 
   // Filter stream by the bot's mentions
   if (tweet.in_reply_to_screen_name == twitterHandle) {
-    console.log('The tweet mentions @' + twitterHandle);
+    console.log("A tweet just came in! This is it: '" + tweet.text + "'");
 
 
     // Check if tweet uses the #subscribe or #stop hashtags
@@ -157,9 +158,46 @@ stream.on('tweet', function(tweet) {
     }
 
   }
-  // end processing my mentions
 
-});  // end stream
+});  // end filter stream
+
+
+// Listen for direct messages
+userStream.on('direct_message', function(message) {
+  // console.log(message);
+
+
+  // Filter stream by messages sent to the bot
+  if (message.direct_message.recipient.screen_name == twitterHandle) {
+    console.log("A direct message just came in! This is it: '" + message.direct_message.text + "'");
+
+
+    // Check if content of message is 'STOP'
+    if (message.direct_message.text.toUpperCase() == 'STOP') {
+      console.log("The message is 'STOP'");
+
+
+      // Drop subscriber from collection
+      console.log('Removing subscriber from collection');
+      try {
+        subscribers.deleteOne({ user_id: message.direct_message.sender.id_str }, function(err, res) {
+          if (res.deletedCount == 0) {
+            console.log('User not found in database; nothing to delete');
+          }
+        });
+      } catch (e) {
+        console.log('Deletion failed', e);
+      }
+
+    }
+
+    else {
+      console.log("The message is not 'STOP'");
+    }
+
+  }
+
+});  // end direct message listener
 
 
 
@@ -168,8 +206,8 @@ stream.on('tweet', function(tweet) {
 // Schedule regular times at which to send messages
 
 // For development:
-var cronTimeValue = '*/6 * * * * *';  // Run every 10 seconds
-// var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
+// var cronTimeValue = '*/6 * * * * *';  // Run every 10 seconds
+var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
 // var cronTimeValue = '00 * * * * *';  // Run every minute
 
 // For production:
@@ -204,17 +242,17 @@ function sendMessages() {
         // Create message
         var msg, tweetMsg, followMsg, friendMsg;
         if (followersCountEnd - doc.followers_count_start >= 0) {
-          followMsg = '\u25B2  ' + (followersCountEnd - doc.followers_count_start) + ' more followers\n';
+          followMsg = '\u2B06\uFE0E  ' + (followersCountEnd - doc.followers_count_start) + ' more followers\n';
         } else {
-          followMsg = '\u25BC  ' + (doc.followers_count_start - followersCountEnd) + ' fewer followers\n';
+          followMsg = '\u2B07\uFE0E  ' + (doc.followers_count_start - followersCountEnd) + ' fewer followers\n';
         }
         if (friendsCountEnd - doc.friends_count_start >= 0) {
-          friendMsg = '\u25B2  ' + (friendsCountEnd - doc.friends_count_start) + ' more following\n';
+          friendMsg = '\u2B06\uFE0E  ' + (friendsCountEnd - doc.friends_count_start) + ' more following\n';
         } else {
-          friendMsg = '\u25BC  ' + (doc.friends_count_start - friendsCountEnd) + ' fewer following\n';
+          friendMsg = '\u2B07\uFE0E  ' + (doc.friends_count_start - friendsCountEnd) + ' fewer following\n';
         }
 
-        msg = 'These are your Twitter stats for the past week:\n\n' + followMsg + friendMsg;
+        msg = 'These are your weekly Twitter stats:\n\n' + followMsg + friendMsg;
 
 
         // Send the message
