@@ -163,7 +163,7 @@ stream.on('tweet', function(tweet) {
 
 // For development:
 var cronTimeValue = '*/6 * * * * *';  // Run every 10 seconds
-// var cronTimeValue = '*/2 * * * * *';  // Run every 30 seconds
+// var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
 // var cronTimeValue = '00 * * * * *';  // Run every minute
 
 // For production:
@@ -177,7 +177,7 @@ var job = new cron.CronJob({
 });
 
 
-// Sends all subscribers their weekly twitter stats via direct message:
+// Sends all subscribers their weekly twitter stats via direct message
 // eg. # tweets made, # followers gained/lost, # friends gained/lost
 function sendMessages() {
   console.log('Tick');
@@ -193,21 +193,47 @@ function sendMessages() {
       } else {
         var followers_count_end = data[0].followers_count,
             friends_count_end = data[0].friends_count;
-      }
 
 
-      // Update the db with current follower and friend counts
-      console.log('Updating database with new stats');
-      try {
-        subscribers.updateOne({ user_id: doc.user_id }, {
-          $set: { followers_count_start: followers_count_end, friends_count_start: friends_count_end }
+        // Create message
+        var msg, tweet_msg, follow_msg, friend_msg;
+        if (followers_count_end - doc.followers_count_start >= 0) {
+          follow_msg = '\u25B2  ' + (followers_count_end - doc.followers_count_start) + ' more followers\n';
+        } else {
+          follow_msg = '\u25BC  ' + (doc.followers_count_start - followers_count_end) + ' fewer followers\n';
+        }
+        if (friends_count_end - doc.friends_count_start >= 0) {
+          friend_msg = '\u25B2  ' + (friends_count_end - doc.friends_count_start) + ' more following\n';
+        } else {
+          friend_msg = '\u25BC  ' + (doc.friends_count_start - friends_count_end) + ' fewer following\n';
+        }
+
+        msg = 'These are your Twitter stats for the past week:\n\n' + follow_msg + friend_msg;
+
+
+        // Send the message
+        console.log('Sending direct message');
+        T.post('direct_messages/new', { user_id: doc.user_id, text: msg }, function(err, res) {
+          if (err) {
+            console.log('Message failed', err);
+          }
         });
-      } catch(e) {
-        console.log('Update failed', e);
+
+
+        // Update the db with current follower and friend counts
+        console.log('Updating database with new stats');
+        try {
+          subscribers.updateOne({ user_id: doc.user_id }, {
+            $set: { followers_count_start: followers_count_end, friends_count_start: friends_count_end }
+          });
+        } catch(e) {
+          console.log('Update failed', e);
+        }
+
       }
 
-    });
+    });  // end twitter lookup
 
-  });  // end iterating through subscribers
+  });  // end database call
 
 }  // end sendMessages()
