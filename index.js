@@ -10,7 +10,7 @@ dotenv.config();
 
 
 // Get the bot's twitter handle
-var twitter_handle = process.env.TWITTER_HANDLE;
+var twitterHandle = process.env.TWITTER_HANDLE;
 
 
 // Create a new Twit object using the api keys
@@ -46,8 +46,8 @@ mongo.MongoClient.connect(dbURL, function(err, client) {
 
 // ...... FILTER INCOMING TWEETS ......
 
-// Initialize a public stream and filter by my screen name
-var stream = T.stream('statuses/filter', { track: '@' + twitter_handle });
+// Initialize a public stream
+var stream = T.stream('statuses/filter', { track: '@' + twitterHandle });
 
 // Listen for new tweets
 stream.on('tweet', function(tweet) {
@@ -55,103 +55,109 @@ stream.on('tweet', function(tweet) {
   console.log("A tweet just came in! This is it: '" + tweet.text + "'");
 
 
-  // Check if tweet uses the #subscribe or #stop hashtags
-  var tags = Object.keys(tweet.entities.hashtags);
-  var subscribes = false, unsubscribes = false;
-  var i = 0;
-  while (i < tags.length && !subscribes && !unsubscribes) {
-    if (tweet.entities.hashtags[tags[i]].text.toLowerCase() == 'stop') {
-      unsubscribes = true;
-    } else if (tweet.entities.hashtags[tags[i]].text.toLowerCase() == 'subscribe') {
-      // Note: if both hashtags are used, #stop takes precedence
-      subscribes = true;
+  // Filter stream by the bot's mentions
+  if (tweet.in_reply_to_screen_name == twitterHandle) {
+    console.log('The tweet mentions @' + twitterHandle);
+
+
+    // Check if tweet uses the #subscribe or #stop hashtags
+    var tags = Object.keys(tweet.entities.hashtags);
+    var subscribes = false, unsubscribes = false;
+    var i = 0;
+    while (i < tags.length && !subscribes && !unsubscribes) {
+      if (tweet.entities.hashtags[tags[i]].text.toLowerCase() == 'stop') {
+        unsubscribes = true;
+      } else if (tweet.entities.hashtags[tags[i]].text.toLowerCase() == 'subscribe') {
+        // Note: if both hashtags are used, #stop takes precedence
+        subscribes = true;
+      }
+      i++;
     }
-    i++;
-  }
 
 
-  // Filter stream by tweets to me, from users requesting to subscribe
-  if (tweet.in_reply_to_screen_name == twitter_handle && subscribes) {
-    console.log('The tweet uses #subscribe');
+    // Process new subscriptions
+    if (subscribes) {
+      console.log('The tweet uses #subscribe');
 
 
-    // Check if user is already a subscriber
-    subscribers.findOne({ user_id: tweet.user.id_str }, function(err, doc) {
-      if (doc) {
-        console.log('User is already a subscriber');
+      // Check if user is already a subscriber
+      subscribers.findOne({ user_id: tweet.user.id_str }, function(err, doc) {
+        if (doc) {
+          console.log('User is already a subscriber');
 
 
-        // Tweet an acknowledgement reply
-        console.log('Tweeting an acknowledgement reply');
-        T.post('statuses/update', { status: '@' + tweet.user.screen_name + " Thanks for tweeting me - you're already a subscriber.",
-        in_reply_to_status_id: tweet.id_str }, function(err, data, response) {
-          if (err) {
-            console.log('Tweeting failed', err);
+          // Tweet an acknowledgement reply
+          console.log('Tweeting an acknowledgement reply');
+          T.post('statuses/update', { status: '@' + tweet.user.screen_name + " Thanks for tweeting me - you're already a subscriber.",
+          in_reply_to_status_id: tweet.id_str }, function(err, data, response) {
+            if (err) {
+              console.log('Tweeting failed', err);
+            }
+          });
+
+
+        } else {
+          console.log('User is a new subscriber');
+
+
+          // Tweet a thank-you reply
+          console.log('Tweeting a thank-you reply');
+          T.post('statuses/update', { status: '@' + tweet.user.screen_name + ' Thanks for subscribing!',
+          in_reply_to_status_id: tweet.id_str }, function(err, data, response) {
+            if (err) {
+              console.log('Tweeting failed', err);
+            }
+          });
+
+
+          // Insert new subscriber into collection
+          var subscriberObj = {
+            user_id: tweet.user.id_str,
+            followers_count_start: tweet.user.followers_count,
+            friends_count_start: tweet.user.friends_count,
+            tweets_this_week: 0
+          };
+
+          console.log('Inserting new subscriber into collection');
+          try {
+            subscribers.insertOne(subscriberObj);
+          } catch (e) {
+            console.log('Insertion failed', e);
           }
-        });
 
-
-      } else {
-        console.log('User is a new subscriber');
-
-
-        // Tweet a thank-you reply
-        console.log('Tweeting a thank-you reply');
-        T.post('statuses/update', { status: '@' + tweet.user.screen_name + ' Thanks for subscribing!',
-        in_reply_to_status_id: tweet.id_str }, function(err, data, response) {
-          if (err) {
-            console.log('Tweeting failed', err);
-          }
-        });
-
-
-        // Insert new subscriber into collection
-        var subscriberObj = {
-          user_id: tweet.user.id_str,
-          followers_count_start: tweet.user.followers_count,
-          friends_count_start: tweet.user.friends_count,
-          tweets_this_week: 0
-        };
-
-        console.log('Inserting new subscriber into collection');
-        try {
-          subscribers.insertOne(subscriberObj);
-        } catch (e) {
-          console.log('Insertion failed', e);
         }
 
+      });
+
+    }  // end processing #subscribe
+
+
+    // Process opt-outs
+    else if (unsubscribes) {
+      console.log('The tweet uses #stop');
+
+
+      // Drop subscriber from collection
+      console.log('Removing subscriber from collection');
+      try {
+        subscribers.deleteOne({ user_id: tweet.user.id_str }, function(err, res) {
+          if (res.deletedCount == 0) {
+            console.log('User not found in database; nothing to delete');
+          }
+        });
+      } catch (e) {
+        console.log('Deletion failed', e);
       }
 
-    });
-
-  }  // end processing #subscribe
+    }  // end processing #stop
 
 
-  // Filter stream by tweets to me, from users requesting to unsubscribe
-  else if (tweet.in_reply_to_screen_name == twitter_handle && unsubscribes) {
-    console.log('The tweet uses #stop');
-
-
-    // Drop subscriber from collection
-    console.log('Removing subscriber from collection');
-    try {
-      subscribers.deleteOne({ user_id: tweet.user.id_str }, function(err, res) {
-        if (res.deletedCount == 0) {
-          console.log('User not found in database; nothing to delete');
-        }
-      });
-    } catch (e) {
-      console.log('Deletion failed', e);
+    else {
+      console.log("The tweet uses neither #subscribe nor #stop");
     }
 
-  }  // end processing #stop
-
-
-  else if (tweet.in_reply_to_screen_name == twitter_handle) {
-    console.log("The tweet uses neither #subscribe nor #stop");
   }
   // end processing my mentions
-
 
 });  // end stream
 
@@ -191,24 +197,24 @@ function sendMessages() {
       if (err) {
         console.log('Lookup failed');
       } else {
-        var followers_count_end = data[0].followers_count,
-            friends_count_end = data[0].friends_count;
+        var followersCountEnd = data[0].followers_count,
+            friendsCountEnd = data[0].friends_count;
 
 
         // Create message
-        var msg, tweet_msg, follow_msg, friend_msg;
-        if (followers_count_end - doc.followers_count_start >= 0) {
-          follow_msg = '\u25B2  ' + (followers_count_end - doc.followers_count_start) + ' more followers\n';
+        var msg, tweetMsg, followMsg, friendMsg;
+        if (followersCountEnd - doc.followers_count_start >= 0) {
+          followMsg = '\u25B2  ' + (followersCountEnd - doc.followers_count_start) + ' more followers\n';
         } else {
-          follow_msg = '\u25BC  ' + (doc.followers_count_start - followers_count_end) + ' fewer followers\n';
+          followMsg = '\u25BC  ' + (doc.followers_count_start - followersCountEnd) + ' fewer followers\n';
         }
-        if (friends_count_end - doc.friends_count_start >= 0) {
-          friend_msg = '\u25B2  ' + (friends_count_end - doc.friends_count_start) + ' more following\n';
+        if (friendsCountEnd - doc.friends_count_start >= 0) {
+          friendMsg = '\u25B2  ' + (friendsCountEnd - doc.friends_count_start) + ' more following\n';
         } else {
-          friend_msg = '\u25BC  ' + (doc.friends_count_start - friends_count_end) + ' fewer following\n';
+          friendMsg = '\u25BC  ' + (doc.friends_count_start - friendsCountEnd) + ' fewer following\n';
         }
 
-        msg = 'These are your Twitter stats for the past week:\n\n' + follow_msg + friend_msg;
+        msg = 'These are your Twitter stats for the past week:\n\n' + followMsg + friendMsg;
 
 
         // Send the message
@@ -224,7 +230,7 @@ function sendMessages() {
         console.log('Updating database with new stats');
         try {
           subscribers.updateOne({ user_id: doc.user_id }, {
-            $set: { followers_count_start: followers_count_end, friends_count_start: friends_count_end }
+            $set: { followers_count_start: followersCountEnd, friends_count_start: friendsCountEnd }
           });
         } catch(e) {
           console.log('Update failed', e);
