@@ -43,6 +43,17 @@ mongo.MongoClient.connect(dbURL, function(err, client) {
 });
 
 
+// helper function to parse Date objects in the format: Monday, Jan. 1st
+function parseDate(date) {
+  var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var months = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'Jun.', 'Jul.', 'Aug.', 'Sep.', 'Oct.', 'Nov.', 'Dec.'];
+  var dates = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th', '13th', '14th', '15th',
+  '16th', '17th', '18th', '19th', '20th', '21st', '22nd', '23rd', '24th', '25th', '26th', '27th', '28th', '29th', '30th', '31st'];
+
+  var str = days[date.getDay()] + ', ' + months[date.getMonth()] + ' ' + dates[date.getDate() - 1];
+  return str;
+}
+
 
 // ...... LISTEN FOR MY INCOMING TWEETS & MESSAGES ......
 
@@ -112,10 +123,13 @@ userStream.on('tweet', function(tweet) {
 
 
           // Insert new subscriber into collection
+          var now = new Date();
           var subscriberObj = {
             user_id: tweet.user.id_str,
+            username: tweet.user.screen_name,
             followers_count_start: tweet.user.followers_count,
             friends_count_start: tweet.user.friends_count,
+            date_start: parseDate(now),
             tweets_this_week: 0
           };
 
@@ -200,15 +214,15 @@ userStream.on('direct_message', function(message) {
 });  // end direct message listener
 
 
-
 // ...... SEND WEEKLY STATS ......
 
 // Schedule regular times at which to send messages
 
 // For development:
 // var cronTimeValue = '*/6 * * * * *';  // Run every 10 seconds
-var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
+// var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
 // var cronTimeValue = '00 * * * * *';  // Run every minute
+var cronTimeValue = '00 25 17 22 11 5';  // Friday, December 22nd at 5:25pm 
 
 // For production:
 // var cronTimeValue = '00 00 08 * * 0';  // Run every Sunday at 8:00:00 AM
@@ -224,7 +238,8 @@ var job = new cron.CronJob({
 // Sends all subscribers their weekly twitter stats via direct message
 // eg. # tweets made, # followers gained/lost, # friends gained/lost
 function sendMessages() {
-  console.log('Tick');
+  var now = new Date();
+  console.log("Tick. It's " + parseDate(now) + ' at ' + now.getHours() + ':' + now.getMinutes());
 
 
   // Iterate through all subscribers
@@ -251,8 +266,9 @@ function sendMessages() {
         } else {
           friendMsg = '\u2B07\uFE0E  ' + (doc.friends_count_start - friendsCountEnd) + ' fewer following\n';
         }
+        var now = new Date();
 
-        msg = 'These are your weekly Twitter stats:\n\n' + followMsg + friendMsg;
+        msg = 'These are your weekly Twitter stats.\n\n' + doc.date_start + ' to ' + parseDate(now) + ':\n' + followMsg + friendMsg;
 
 
         // Send the message
@@ -264,11 +280,11 @@ function sendMessages() {
         });
 
 
-        // Update the db with current follower and friend counts
+        // Update the db with current information
         console.log('Updating database with new stats');
         try {
           subscribers.updateOne({ user_id: doc.user_id }, {
-            $set: { followers_count_start: followersCountEnd, friends_count_start: friendsCountEnd }
+            $set: { followers_count_start: followersCountEnd, friends_count_start: friendsCountEnd, date_start: parseDate(now) }
           });
         } catch(e) {
           console.log('Update failed', e);
