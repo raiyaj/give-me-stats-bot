@@ -131,7 +131,8 @@ userStream.on('tweet', function(tweet) {
             followers_count_start: tweet.user.followers_count,
             friends_count_start: tweet.user.friends_count,
             date_start: parseDate(now),
-            tweets_this_week: 0
+            filter_stream_refreshed: false,
+            tweets_this_cycle: 0
           };
 
           console.log('Inserting new subscriber into collection');
@@ -226,9 +227,7 @@ setTimeout(getNumItems, 5000);
 function getNumItems() {
   if (!db) {
     console.log('Database not connected; cannot count tweets');
-  }
-
-
+  } else {
   // Get # of documents in collection
   // Note that .count() returns a 'promise', which contains the count of items when resolved
   // (so it represents the eventual completion of an asynchronous operation)
@@ -237,6 +236,8 @@ function getNumItems() {
       console.log('Inside getNumItems(). There are', numItems, 'subscriber(s)');
       getUsersToFollow(numItems);
     })
+
+  }
 
 }
 
@@ -264,7 +265,7 @@ function getUsersToFollow(n) {
 
 
 function countTweets(followList) {
-  console.log('inside countTweets()');
+  console.log('Inside countTweets()');
 
 
   // Initialize a filter stream
@@ -273,24 +274,65 @@ function countTweets(followList) {
 
   // Listen for tweets
   tweetCounter.on('tweet', function(tweet) {
-    console.log('a tweet');
-  })
+    // console.log(tweet);
+
+
+    // Double check tweet is from a subscriber
+    subscribers.findOne({ user_id: tweet.user.id_str }, function(err, doc) {
+      if (doc) {
+        console.log('A tweet from @' + doc.username + ' just came in!');
+
+
+        // Increment their tweet count
+        console.log('Incrementing tweet count');
+        try {
+          subscribers.updateOne({ user_id: doc.user_id }, {
+            $inc: { tweets_this_cycle: 1 }
+          });
+        } catch(e) {
+          console.log('Update failed', e);
+        }
+
+      }
+    });
+
+  })  // end listener
 
 
   // Each week, disconnect the stream, update follow list, then reconnect
   // (only do once per week to minimize # of streams being opened by the bot)
 
   // For development:
-  var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
+  // var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
   // var cronTimeValue = '00 * * * * *';  // Run every minute
+  // var cronTimeValue = '00 50 18 23 * *';
 
   // For production:
-  // var cronTimeValue = '00 00 08 * * 0';  // Run every Sunday at 8:00:00 AM
+  var cronTimeValue = '00 00 08 * * 0';  // Run every Sunday at 8:00:00 AM
+
   var refreshList = new cron.CronJob({
     cronTime: cronTimeValue,
     onTick: function() {
-      tweetCounter.stop();  // Stop stream ASAP
-      refreshList.stop();  // Stop job so that the onComplete function fires
+      tweetCounter.stop();  // Stop stream ASAP so Twitter doesn't ban us
+      var now = new Date();
+      console.log("Tick. It's " + parseDate(now) + ' at ' + now.getHours() + ':' + now.getMinutes());
+
+
+      // Update db since stream is about to be refreshed
+      subscribers.find().forEach(function(doc) {
+        try {
+          subscribers.updateOne({ user_id: doc.user_id }, {
+            $set: { filter_stream_refreshed: true }
+          });
+        } catch(e) {
+          console.log('Update failed', e);
+        }
+      });
+
+
+      // Stop job so that the onComplete function fires
+      refreshList.stop();
+
     },  // Fires at specified time
     onComplete: function() {
       console.log('Refreshing filter stream');
@@ -300,7 +342,7 @@ function countTweets(followList) {
     timeZone: 'America/Los_Angeles'  // PST
   });
 
-}
+}  // end countTweets()
 
 
 
@@ -310,6 +352,7 @@ function countTweets(followList) {
 // var cronTimeValue = '*/6 * * * * *';  // Run every 10 seconds
 // var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
 // var cronTimeValue = '00 * * * * *';  // Run every minute
+// var cronTimeValue = '00 33 19 23 * *';
 
 // For production:
 var cronTimeValue = '00 05 08 * * 0';  // Run every Sunday at 8:05:00 AM
@@ -343,6 +386,7 @@ function sendMessages() {
 
         // Create message
         var msg, tweetMsg, followMsg, friendMsg;
+        tweetMsg = '\u2B06\uFE0E  ' + doc.tweets_this_cycle + ' new tweets\n';
         if (followersCountEnd - doc.followers_count_start >= 0) {
           followMsg = '\u2B06\uFE0E  ' + (followersCountEnd - doc.followers_count_start) + ' more followers\n';
         } else {
@@ -353,9 +397,14 @@ function sendMessages() {
         } else {
           friendMsg = '\u2B07\uFE0E  ' + (doc.friends_count_start - friendsCountEnd) + ' fewer following\n';
         }
+
         var now = new Date();
 
-        msg = 'These are your weekly Twitter stats.\n\n' + doc.date_start + ' to ' + parseDate(now) + ':\n' + followMsg + friendMsg;
+        msg = 'These are your weekly Twitter stats.\n\n' + doc.date_start + ' to ' + parseDate(now) + ':\n';
+        if (doc.filter_stream_refreshed) {
+          msg += tweetMsg;
+        }
+        msg += followMsg + friendMsg;
 
 
         // Send the message
@@ -371,7 +420,7 @@ function sendMessages() {
         console.log('Updating database with new stats');
         try {
           subscribers.updateOne({ user_id: doc.user_id }, {
-            $set: { followers_count_start: followersCountEnd, friends_count_start: friendsCountEnd, date_start: parseDate(now) }
+            $set: { followers_count_start: followersCountEnd, friends_count_start: friendsCountEnd, date_start: parseDate(now), tweets_this_cycle: 0 }
           });
         } catch(e) {
           console.log('Update failed', e);
