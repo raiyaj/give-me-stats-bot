@@ -55,6 +55,7 @@ function parseDate(date) {
 }
 
 
+
 // ...... LISTEN FOR MY INCOMING TWEETS & MESSAGES ......
 
 // Initialize a user stream
@@ -173,7 +174,7 @@ userStream.on('tweet', function(tweet) {
 
   }
 
-});  // end filter stream
+});  // end listener
 
 
 // Listen for direct messages
@@ -211,23 +212,109 @@ userStream.on('direct_message', function(message) {
 
   }
 
-});  // end direct message listener
+});  // end listener
+
+
+
+// ...... LISTEN FOR SUBSCRIBERS' TWEETS ......
+
+// Set a 5s timeout to give enough time for the database to connect
+setTimeout(getNumItems, 5000);
+
+
+// Gets the number of subscribers in collection
+function getNumItems() {
+  if (!db) {
+    console.log('Database not connected; cannot count tweets');
+  }
+
+
+  // Get # of documents in collection
+  // Note that .count() returns a 'promise', which contains the count of items when resolved
+  // (so it represents the eventual completion of an asynchronous operation)
+  subscribers.count()
+    .then(function(numItems) {
+      console.log('Inside getNumItems(). There are', numItems, 'subscriber(s)');
+      getUsersToFollow(numItems);
+    })
+
+}
+
+
+// Gets a comma-separated list of all subscribers' ids
+function getUsersToFollow(n) {
+  console.log('Inside getUsersToFollow()');
+
+
+  var usersToFollow = [];
+  var j = 0;  // Counter
+  if (n == 0) {
+    countTweets(usersToFollow);
+  } else {
+    subscribers.find().forEach(function(doc) {
+      usersToFollow.push(doc.user_id);
+      j++;
+      if (j == n) {
+        countTweets(usersToFollow);
+      }
+    });
+  }
+
+}
+
+
+function countTweets(followList) {
+  console.log('inside countTweets()');
+
+
+  // Initialize a filter stream
+  var tweetCounter = T.stream('statuses/filter', { follow: followList });
+
+
+  // Listen for tweets
+  tweetCounter.on('tweet', function(tweet) {
+    console.log('a tweet');
+  })
+
+
+  // Each week, disconnect the stream, update follow list, then reconnect
+  // (only do once per week to minimize # of streams being opened by the bot)
+
+  // For development:
+  var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
+  // var cronTimeValue = '00 * * * * *';  // Run every minute
+
+  // For production:
+  // var cronTimeValue = '00 00 08 * * 0';  // Run every Sunday at 8:00:00 AM
+  var refreshList = new cron.CronJob({
+    cronTime: cronTimeValue,
+    onTick: function() {
+      tweetCounter.stop();  // Stop stream ASAP
+      refreshList.stop();  // Stop job so that the onComplete function fires
+    },  // Fires at specified time
+    onComplete: function() {
+      console.log('Refreshing filter stream');
+      getNumItems();
+    },  // Fires when the job stops
+    start: true,  // Start job right now
+    timeZone: 'America/Los_Angeles'  // PST
+  });
+
+}
+
 
 
 // ...... SEND WEEKLY STATS ......
-
-// Schedule regular times at which to send messages
 
 // For development:
 // var cronTimeValue = '*/6 * * * * *';  // Run every 10 seconds
 // var cronTimeValue = '*/30 * * * * *';  // Run every 30 seconds
 // var cronTimeValue = '00 * * * * *';  // Run every minute
-var cronTimeValue = '00 25 17 22 11 5';  // Friday, December 22nd at 5:25pm 
 
 // For production:
-// var cronTimeValue = '00 00 08 * * 0';  // Run every Sunday at 8:00:00 AM
+var cronTimeValue = '00 05 08 * * 0';  // Run every Sunday at 8:05:00 AM
 
-var job = new cron.CronJob({
+var directMessages = new cron.CronJob({
   cronTime: cronTimeValue,
   onTick: sendMessages,  // Function to fire at specified time
   start: true,  // Start job right now
