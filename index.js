@@ -146,7 +146,7 @@ userStream.on('tweet', function(tweet) {
           // Send welcome message
           console.log('Sending welcome message');
           var welcomeMsg = "Thanks for subscribing! You'll find a message in your inbox every \
-          Sunday morning at 8 a.m. (PST) with your weekly tweet and follower stats! Note: your new tweets \
+          Sunday morning at 10 a.m. (PST) with your weekly tweet and follower stats! Note: your new tweets \
           won't begin to get counted until the next weekly cycle.\n\nReply 'STOP' at any time to opt-out.";
           T.post('direct_messages/new', { user_id: tweet.user.id_str, text: welcomeMsg }, function(err, res) {
             if (err) {
@@ -245,7 +245,7 @@ function getNumItems() {
   // (so it represents the eventual completion of an asynchronous operation)
   subscribers.count()
     .then(function(numItems) {
-      console.log('Inside getNumItems(). There are', numItems, 'subscriber(s)');
+      console.log('Refreshing stream. There are', numItems, 'subscriber(s)');
       getUsersToFollow(numItems);
     })
 
@@ -256,9 +256,6 @@ function getNumItems() {
 
 // Gets a comma-separated list of all subscribers' ids
 function getUsersToFollow(n) {
-  console.log('Inside getUsersToFollow()');
-
-
   var usersToFollow = [];
   var j = 0;  // Counter
   if (n == 0) {
@@ -277,9 +274,6 @@ function getUsersToFollow(n) {
 
 
 function countTweets(followList) {
-  console.log('Inside countTweets()');
-
-
   // Initialize a filter stream
   var tweetCounter = T.stream('statuses/filter', { follow: followList });
 
@@ -320,7 +314,7 @@ function countTweets(followList) {
   // var cronTimeValue = '00 50 18 23 * *';
 
   // For production:
-  var cronTimeValue = '00 00 08 * * 0';  // Run every Sunday at 8:00:00 AM
+  var cronTimeValue = '00 01 10 * * 0';  // Run every Sunday at 10:01:00 AM
 
   var refreshList = new cron.CronJob({
     cronTime: cronTimeValue,
@@ -367,7 +361,7 @@ function countTweets(followList) {
 // var cronTimeValue = '00 33 19 23 * *';
 
 // For production:
-var cronTimeValue = '00 05 08 * * 0';  // Run every Sunday at 8:05:00 AM
+var cronTimeValue = '00 00 10 * * 0';  // Run every Sunday at 10:00:00 AM
 
 var directMessages = new cron.CronJob({
   cronTime: cronTimeValue,
@@ -387,7 +381,6 @@ function sendMessages() {
   // Iterate through all subscribers
   subscribers.find().forEach(function(doc) {
     // Get their current # of followers and friends
-    console.log("Looking up user's current stats");
     T.get('users/lookup', { user_id: doc.user_id }, function(err, data, response) {
       if (err) {
         console.log('Lookup failed');
@@ -420,7 +413,7 @@ function sendMessages() {
 
 
         // Send the message
-        console.log('Sending direct message');
+        console.log('Sending direct message to @' + doc.username);
         T.post('direct_messages/new', { user_id: doc.user_id, text: msg }, function(err, res) {
           if (err) {
             console.log('Message failed', err);
@@ -429,7 +422,6 @@ function sendMessages() {
 
 
         // Update the db with current information
-        console.log('Updating database with new stats');
         try {
           subscribers.updateOne({ user_id: doc.user_id }, {
             $set: { followers_count_start: followersCountEnd, friends_count_start: friendsCountEnd, date_start: parseDate(now), tweets_this_cycle: 0 }
