@@ -145,9 +145,7 @@ userStream.on('tweet', function(tweet) {
 
           // Send welcome message
           console.log('Sending welcome message');
-          var welcomeMsg = "Thanks for subscribing! You'll find a message in your inbox every \
-          Sunday morning at 10 a.m. (PST) with your weekly tweet and follower stats! Note: your new tweets \
-          won't begin to get counted until the next weekly cycle.\n\nReply 'STOP' at any time to opt-out.";
+          var welcomeMsg = "Thanks for subscribing! You'll find a message in your inbox every Sunday morning at 10 a.m. (PST) with your weekly tweet and follower stats! Note: your new tweets won't begin to get counted until the next weekly cycle.\n\nReply 'STOP' at any time to opt-out.";
           T.post('direct_messages/new', { user_id: tweet.user.id_str, text: welcomeMsg }, function(err, res) {
             if (err) {
               console.log('Message failed', err);
