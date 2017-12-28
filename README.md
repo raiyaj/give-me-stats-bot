@@ -1,5 +1,9 @@
 # Give Me Stats bot
 
+<img src="logo.png" alt="logo" width="300">
+
+Using the [Twitter Streaming API](https://developer.twitter.com/en/docs/tweets/filter-realtime/overview), this bot listens for new subscribers who tweet [@give_me_stats](https://twitter.com/give_me_stats) with _#subscribe_, then begins to count their new tweets as they come in and sends them regular direct messages with their previous week's tweet and follower stats.
+
 ## Setup
 
 __Twitter__
