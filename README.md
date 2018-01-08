@@ -6,10 +6,10 @@ Using the [Twitter API](https://developer.twitter.com/en/docs), [twit](https://g
 
 ## Features
 
-* __Streams the bot's incoming events.__ Adds users when they tweet the bot with _#subscribe_, and drops users when they tweet the bot with _#stop_ or send it a DM saying _STOP_.
+* __Streams incoming events.__ Adds users when they tweet the bot with _#subscribe_, and drops users when they tweet the bot with _#stop_ or send it a DM saying _STOP_.
 * __Interacts with users.__ Sends new subscribers a thank-you reply and welcome message.
 * __Sends scheduled activity reports.__ Each Sunday at 10:00 a.m. PST, sends each subscriber a DM summarizing changes in their number of tweets, followers and friends since the last message was sent.
-* __Counts subscribers' tweets.__ Since the Twitter API offers no easy access to the number of tweets a user has posted, the bot streams subscribers' tweets, incrementing a counter when one comes in. However, the stream's track list doesn't update automatically as subscribers are added, so the bot undergoes a scheduled refresh every Sunday at 10:01 a.m. PST (this means the bot won't count new subscribers' tweets until the next weekly cycle starts).
+* __Counts subscribers' tweets.__ Since the Twitter API offers no easy access to the number of tweets a user has posted, the bot also streams subscribers' tweets, incrementing a counter when one comes in. However, the stream's track list doesn't update automatically as subscribers are added, so the bot undergoes a scheduled refresh every Sunday at 10:01 a.m. PST (this means the bot won't count new subscribers' tweets until the next weekly cycle starts).
   * __Flaws:__ New subscribers' tweets posted between 10:00 and 10:01 a.m. are missed, and the stream must briefly close before it can refresh.
 
 <img src="images/tweet.png" alt="tweet" width="250"> <img src="images/direct-message.png" alt="direct message" width="250">
