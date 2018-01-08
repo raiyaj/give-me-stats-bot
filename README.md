@@ -1,8 +1,18 @@
-# Give Me Stats Bot
+# [Give Me Stats Bot](https://twitter.com/give_me_stats)
 
 <img src="images/logo.png" alt="logo" width="300">
 
-Using the [Twitter Streaming API](https://developer.twitter.com/en/docs/tweets/filter-realtime/overview), this bot listens for new subscribers who tweet [@give_me_stats](https://twitter.com/give_me_stats) with _#subscribe_, then begins to count their new tweets as they come in and sends them regular direct messages with their previous week's tweet and follower stats.
+Using the [Twitter API](https://developer.twitter.com/en/docs), [twit](https://github.com/ttezel/twit) and [node-cron](https://github.com/kelektiv/node-cron), this bot receives new subscribers, then begins to listen for their incoming tweets and send them ongoing direct messages that summarize their recent Twitter activity.
+
+## Features
+
+* __Streams the bot's incoming events.__ Adds users when they tweet the bot with _#subscribe_, and drops users when they tweet the bot with _#stop_ or send it a DM saying _STOP_.
+* __Interacts with users.__ Sends new subscribers a thank-you reply and welcome message.
+* __Sends scheduled activity reports.__ Each Sunday at 10:00 a.m. PST, sends each subscriber a DM summarizing changes in their number of tweets, followers and friends since the last message was sent.
+* __Counts subscribers' tweets.__ Since the Twitter API offers no easy access to the number of tweets a user has posted, the bot streams subscribers' tweets, incrementing a counter when one comes in. However, the stream's track list doesn't update automatically as subscribers are added, so the bot undergoes a scheduled refresh every Sunday at 10:01 a.m. PST (this means the bot won't count new subscribers' tweets until the next weekly cycle starts).
+  * __Flaws:__ New subscribers' tweets posted between 10:00 and 10:01 a.m. are missed, and the stream must briefly close before it can refresh.
+
+<img src="images/tweet.png" alt="tweet" width="250"> <img src="images/direct-message.png" alt="direct message" width="250">
 
 ## Setup
 
@@ -13,7 +23,7 @@ Login to your [Twitter](https://twitter.com/) account (the bot will tweet from t
 TWITTER_HANDLE=<your_twitter_handle>
 ```
 
-[Create a new app](https://apps.twitter.com/app/new). Under the _Keys and Access Tokens_ tab, you'll find your _Consumer Key_ and _Consumer Secret_. Modify the app's permission level to _Read, write and direct messages_, then re-generate them and scroll down to generate your access tokens. Add all four keys your `.env` file:
+[Create a new app](https://apps.twitter.com/app/new). Under the _Keys and Access Tokens_ tab, you'll find your _Consumer Key_ and _Consumer Secret_. Modify the app's permission level to _Read, write and direct messages_, then re-generate them and scroll down to generate your access tokens. Add all four keys to your `.env` file:
 ```
 TWITTER_CONSUMER_KEY=<YOUR_CONSUMER_KEY>
 TWITTER_CONSUMER_SECRET=<YOUR_CONSUMER_SECRET>
