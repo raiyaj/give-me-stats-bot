@@ -145,7 +145,7 @@ userStream.on('tweet', function(tweet) {
 
           // Send welcome message
           console.log('Sending welcome message');
-          var welcomeMsg = "Thanks for subscribing! You'll find a message in your inbox every Sunday morning at 10 a.m. (PST) with your previous week's tweet and follower stats! Note: your new tweets won't begin to get counted until the next weekly cycle.\n\nReply 'STOP' at any time to opt-out.";
+          var welcomeMsg = "Thanks for subscribing! You'll find a message in your inbox every Sunday at 10 a.m. PST with your previous week's tweet and follower stats! Note: your new tweets won't begin to get counted until the next weekly cycle.\n\nReply 'STOP' at any time to opt-out.";
           T.post('direct_messages/new', { user_id: tweet.user.id_str, text: welcomeMsg }, function(err, res) {
             if (err) {
               console.log('Message failed', err);
@@ -389,12 +389,30 @@ function sendMessages() {
 
         // Create message
         var msg, tweetMsg, followMsg, friendMsg;
-        tweetMsg = '\u2B06\uFE0E  ' + doc.tweets_this_cycle + ' new tweets\n';
-        if (followersCountEnd - doc.followers_count_start >= 0) {
-          followMsg = '\u2B06\uFE0E  ' + (followersCountEnd - doc.followers_count_start) + ' more followers\n';
+
+        tweetMsg = '\u2B06\uFE0E  ' + doc.tweets_this_cycle + ' new tweet';
+        if (doc.tweets_this_cycle != 1) {
+          tweetMsg += 's\n';
         } else {
-          followMsg = '\u2B07\uFE0E  ' + (doc.followers_count_start - followersCountEnd) + ' fewer followers\n';
+          tweetMsg += '\n';
         }
+
+        if (followersCountEnd - doc.followers_count_start >= 0) {
+          followMsg = '\u2B06\uFE0E  ' + (followersCountEnd - doc.followers_count_start) + ' more follower';
+          if (followersCountEnd - doc.followers_count_start != 1) {
+            followMsg += 's\n';
+          } else {
+            followMsg += '\n';
+          }
+        } else {
+          followMsg = '\u2B07\uFE0E  ' + (doc.followers_count_start - followersCountEnd) + ' fewer follower';
+          if (doc.followers_count_start - followersCountEnd != 1) {
+            followMsg += 's\n';
+          } else {
+            followMsg += '\n';
+          }
+        }
+
         if (friendsCountEnd - doc.friends_count_start >= 0) {
           friendMsg = '\u2B06\uFE0E  ' + (friendsCountEnd - doc.friends_count_start) + ' more following\n';
         } else {
